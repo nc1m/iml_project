@@ -7,7 +7,7 @@ Short Description...
 
 ### Dependencies
 
-- Dependencies can be installed using 'requirements.txt'
+- Dependencies can be installed using `requirements.txt`
 
 ### Installation instruction
 To install the requirements, follow these steps:
@@ -18,7 +18,12 @@ pip install -r requirements.txt
 ```
 
 ### Usage:
-The default branch for latest and stable changes is 'main'.
+The default branch for latest and stable changes is `main`.
+```bash
+# Run file
+python example.py
+
+```
 
 ### What does each file do?
 
