@@ -3,7 +3,8 @@
 Integrated Gradients: Baselines for Text Classification
 </h2>
 
-Short Description...
+Many explanation methods, including the popular `Integrated Gradients` method, require choosing a baseline hyperparameter. What does this parameter mean and how does it impact the resulting explanations? What implicit assumptions are made by selecting different baselines?
+In this project, the goal is to investigate these questions using text classification models as a case study.
 
 ### Dependencies
 
