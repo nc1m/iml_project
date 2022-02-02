@@ -7,7 +7,7 @@ Short Description...
 
 ### Dependencies
 
-- Dependencies can be installed using `requirements.txt`
+Dependencies can be installed using `requirements.txt`
 
 ### Installation instruction
 To install the requirements, follow these steps:
