@@ -1,0 +1,15 @@
+* TODO IML_PROJECT
+DEADLINE: <2022-02-14 Mon>
+** Requirements
+*** clean code
+*** well documentation
+*** all requirements well documented (e.g., requirements.txt)
+*** README.md file with installation instructions
+*** Running with several random seeds to ensure reproducibility
+** Tasks
+*** Implementation (10): Implement an experiment setup that runs Integrated Gradients for a selection of BERT-based text classification models and allows the flexible use of different baseline techniques.
+*** Visualization (5): Visualize the Sum of Cumulative gradients.
+*** Visualization (5): Visualize the interpolated inputs on the path by decoding the interpolated embeddings to the closest-by tokens.
+*** Analysis (5): Add different baselines to your implementation. Potential choices include, but n ot limited to: Constant Baselines, Maximum Distance Baseline, Blurred Baseline, Uniform Baseline, Gaussian Baseline.
+*** Evaluation (5): Evaluate different baselines using Top K Ablation Tests.
+*** Extension (10): Extend your implementation by the discretized version of Integrated Gradients, that uses a non-linear path with interpolation points lying close to actual words in the embedding space
