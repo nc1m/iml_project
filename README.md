@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 ```
 
-### Usage:
+### Usage
 The default branch for latest and stable changes is `main`.
 ```bash
 # Run file
