@@ -39,11 +39,54 @@ def set_seed(seed):
     os.environ["PYTHONHASHSEED"] = str(seed)
 
 
+MODEL_CHOICES = dict()
+# Predicts NEGATIVE/POSITIVE sentiment fine tunde on SST (2 classes)
+# https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english?text=I+like+you.+I+love+you
+MODEL_CHOICES['sentimentSST2'] = 'distilbert-base-uncased-finetuned-sst-2-english'
+
+# Predicts 1 star/2 stars/3 stars/4 stars/ 5 stars sentiment for product reviews (5 classes)
+# https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment?text=I+like+you.+I+love+you
+MODEL_CHOICES['proudctReviews5'] = 'nlptown/bert-base-multilingual-uncased-sentiment'
+
+# Predicts negative/positive/neutral sentiment for financial texts (3 classes)
+# https://huggingface.co/ProsusAI/finbert?text=Stocks+rallied+and+the+British+pound+gained.
+MODEL_CHOICES['sentimentFinancial3'] = 'ProsusAI/finbert'
+
+# Predicts anger/disgust/fear/joy/neutral/sadness/surprise emotions (7 classes)
+# https://huggingface.co/j-hartmann/emotion-english-distilroberta-base?text=This+movie+always+makes+me+cry..
+# (LARGE MODEL?)
+MODEL_CHOICES['emotion7'] = 'j-hartmann/emotion-english-distilroberta-base'
+
+# Predicts sadness/joy/love/anger/fear/surprise emotion (6 classes)
+# https://huggingface.co/bhadresh-savani/distilbert-base-uncased-emotion?text=I+like+you.+I+love+you
+MODEL_CHOICES['emotion6'] = 'bhadresh-savani/distilbert-base-uncased-emotion'
+
+# Predicts POS/NEG/NEU sentiment trained on tweets (3 classes)
+# https://huggingface.co/finiteautomata/bertweet-base-sentiment-analysis?text=I+like+you.+I+love+you
+MODEL_CHOICES['sentimentTweet3'] = 'finiteautomata/bertweet-base-sentiment-analysis'
+
+BASELINE_TYPES = ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
+
+
+
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='TODO: Add general description AND add model and baseline type description here (why here? because newlines are possible here.\ndemo1\ndemo2)', formatter_class=argparse.RawDescriptionHelpFormatter)  # TODO read description
+    parser.add_argument('-m', '--model',
+                        default='sentimentSST2',
+                        type=str,
+                        choices=[*list(MODEL_CHOICES.keys())],
+                        help='Set BERT-based text classification model. Possible values are: '+', '.join(list(MODEL_CHOICES.keys())),
+                        metavar='MODEL')
+    parser.add_argument('-b', '--baselineType',
+                        default='constant',
+                        type=str,
+                        choices=BASELINE_TYPES,
+                        help='Set which baseline type will be used. Possible values are: '+', '.join(BASELINE_TYPES),
+                        metavar='BASELINE_TYPE')
     parser.add_argument('--no_cuda', help='Set this if cuda is availbable, but you do NOT want to use it.', action='store_true')
     args = parser.parse_args()
     return args
+
 
 def p_special_tokens(tokenizer):
     if tokenizer._bos_token is not None:
@@ -62,10 +105,12 @@ def p_special_tokens(tokenizer):
         print(tokenizer.mask_token, tokenizer.encode(tokenizer.mask_token))
     return None
 
+
 def main():
     set_seed(42)
     args = parse_args()
     print(args)
+    exit()
     use_cuda = False
     if torch.cuda.is_available() and not args.no_cuda:
         pass
