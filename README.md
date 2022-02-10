@@ -29,14 +29,11 @@ python example.py
 ### What does each file do?
 
     .
-    ├── scripts
-    │   └── run.py                # The main runner script to launch jobs.
+    ├── resources
+    │   ├── lecture_slides    
+    │   └── paper                         
     ├── src                     
-    │   ├── agent.py              # Implements the Agent API for action selection 
-    │   ├── algos.py              # Distributional RL loss
-    │   ├── models.py             # Network architecture and forward passes.
-    │   ├── rlpyt_atari_env.py    # Slightly modified Atari env from rlpyt
-    │   ├── rlpyt_utils.py        # Utility methods that we use to extend rlpyt's functionality
-    │   └── utils.py              # Command line arguments and helper functions 
+    │   ├── integrated_gradients.py
+    │   └── paper  
     │
     └── requirements.txt          # Dependencies
