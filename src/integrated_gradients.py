@@ -1,10 +1,16 @@
+# Standrad lib
 import os
 import logging
 import argparse
+import webbrowser
+
+# Own modules
+import bert_datasets
 
 import random
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
 from transformers import pipeline
 from transformers import AutoTokenizer
@@ -16,6 +22,8 @@ from captum.attr import TokenReferenceBase
 from captum.attr import LayerIntegratedGradients
 from captum.attr import visualization
 
+#from IPython.core.display import HTML, display
+
 # special tokens
 SEPERATOR = '[SEP]'
 
@@ -25,6 +33,7 @@ SEPERATOR = '[SEP]'
 
 # models:
 MODEL_NAMES = {0: 'distilbert-base-uncased-finetuned-sst-2-english'}
+
 
 def set_seed(seed):
     """Set seed"""
@@ -50,12 +59,12 @@ MODEL_CHOICES['proudctReviews5'] = 'nlptown/bert-base-multilingual-uncased-senti
 
 # Predicts negative/positive/neutral sentiment for financial texts (3 classes)
 # https://huggingface.co/ProsusAI/finbert?text=Stocks+rallied+and+the+British+pound+gained.
-MODEL_CHOICES['sentimentFinancial3'] = 'ProsusAI/finbert'
+MODEL_CHOICES['sentimentFin3'] = 'ProsusAI/finbert'
 
-# Predicts anger/disgust/fear/joy/neutral/sadness/surprise emotions (7 classes)
-# https://huggingface.co/j-hartmann/emotion-english-distilroberta-base?text=This+movie+always+makes+me+cry..
-# (LARGE MODEL?)
-MODEL_CHOICES['emotion7'] = 'j-hartmann/emotion-english-distilroberta-base'
+# # Predicts anger/disgust/fear/joy/neutral/sadness/surprise emotions (7 classes)
+# # https://huggingface.co/j-hartmann/emotion-english-distilroberta-base?text=This+movie+always+makes+me+cry..
+# No suitable test dataset found
+# MODEL_CHOICES['emotion7'] = 'j-hartmann/emotion-english-distilroberta-base'
 
 # Predicts sadness/joy/love/anger/fear/surprise emotion (6 classes)
 # https://huggingface.co/bhadresh-savani/distilbert-base-uncased-emotion?text=I+like+you.+I+love+you
@@ -63,10 +72,10 @@ MODEL_CHOICES['emotion6'] = 'bhadresh-savani/distilbert-base-uncased-emotion'
 
 # Predicts POS/NEG/NEU sentiment trained on tweets (3 classes)
 # https://huggingface.co/finiteautomata/bertweet-base-sentiment-analysis?text=I+like+you.+I+love+you
-MODEL_CHOICES['sentimentTweet3'] = 'finiteautomata/bertweet-base-sentiment-analysis'
+# No suitable test dataset found
+# MODEL_CHOICES['sentimentTweet3'] = 'finiteautomata/bertweet-base-sentiment-analysis'
 
 BASELINE_TYPES = ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
-
 
 
 def parse_args():
@@ -83,7 +92,10 @@ def parse_args():
                         choices=BASELINE_TYPES,
                         help='Set which baseline type will be used. Possible values are: '+', '.join(BASELINE_TYPES),
                         metavar='BASELINE_TYPE')
-    parser.add_argument('--no_cuda', help='Set this if cuda is availbable, but you do NOT want to use it.', action='store_true')
+    # parser.add_argument('-o', '--outputDir', default='./', type=str, help='TODO')
+    parser.add_argument('-n', '--numSamples', default=10, type=int, help='Number of samples')
+    parser.add_argument('--onlyFalse', action='store_true', help='Set this if only wrong predicted samples should be shown')
+    parser.add_argument('--no_cuda', action='store_true', help='Set this if cuda is availbable, but you do NOT want to use it.')
     args = parser.parse_args()
     return args
 
@@ -110,36 +122,40 @@ def main():
     set_seed(42)
     args = parse_args()
     print(args)
-    exit()
     use_cuda = False
     if torch.cuda.is_available() and not args.no_cuda:
         pass
         # use_cuda = True
     print('CUDA enabled:', use_cuda)
 
-    modelName = 'distilbert-base-uncased-finetuned-sst-2-english'
-    model = AutoModelForSequenceClassification.from_pretrained(modelName)
-    print(model.config)
+    # Load model
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_CHOICES[args.model])
+    # print(model.config)
     id2label = model.config.to_dict()['id2label']
+    print(f'Labels: {id2label}')
     if use_cuda:
         model = model.cuda()
     model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(modelName)
+
+    # Load tokenizer and get pad token
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_CHOICES[args.model])
     if tokenizer._pad_token is not None:
         pad_token = tokenizer.pad_token
         pad_token_id = tokenizer.encode(pad_token)
-        print(pad_token, pad_token_id)
+        print(f'PAD_TOKEN:\t{pad_token}')
+        print(f'PAD_TOKEN_ID:\t{pad_token_id}')
     else:
         logging.error("Using pad_token, but it is not set yet.")
     p_special_tokens(tokenizer)
-    print(tokenizer.decode(0))
-    print(tokenizer.decode(101))
-    print(tokenizer.decode(102))
-    print(tokenizer.decode(103))
+    # print(tokenizer.decode(0))
+    # print(tokenizer.decode(101))
+    # print(tokenizer.decode(102))
+    # print(tokenizer.decode(103))
 
     token_reference = TokenReferenceBase(reference_token_idx=pad_token_id[0])
     # vocab = torchtext.vocab.vocab(tokenizer.get_vocab())
 
+    # Custom forward function
     def custom_forward(input_ids, attention_mask):
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         return outputs.logits
@@ -152,18 +168,26 @@ def main():
 
     lig = LayerIntegratedGradients(custom_forward, model.get_input_embeddings())
 
-    samples = [('It was a fantastic performance !', 1), ('Best film ever', 1), ('Such a great show!', 1), ('It was a horrible movie', 0), ('I\'ve never watched something as bad', 0), ('That is a terrible movie.', 0)]
+    dataset = bert_datasets.build_dataset(args.model, tokenizer)
+    dataset = dataset.shuffle()
+    # help(dataset.features['label'])
+    # print(dataset.features['label']._int2str)
+    # print(dataset.features['label']._str2int)
+
+    print(dataset.info.features)
+    print(dataset[0])
+
     vis_result = []
-
-
-    for sentence, label in samples:
-        print(sentence, label)
-        inputs = tokenizer(sentence,
+    numAttr = 0
+    for sample in dataset:
+        print(sample)
+        inputs = tokenizer(sample['inputString'],
                            padding=True,
                            truncation=True,
                            max_length=512,
                            return_tensors="pt")
-        print(inputs)
+        print(f'INPUTS:\n {inputs}')
+
         model.zero_grad()
         if use_cuda:
             inputs = inputs.cuda()
@@ -178,15 +202,15 @@ def main():
 
         # for key in inputs:
         #     inputs[key] = inputs[key].unsqueeze(0)
-        print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
-        print('reference_indices.shape:', reference_indices.shape)
-        print(inputs['input_ids'].dtype)
-        print(reference_indices.dtype)
+        # print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
+        # print('reference_indices.shape:', reference_indices.shape)
+        # print(inputs['input_ids'].dtype)
+        # print(reference_indices.dtype)
         # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
         attributions_ig, delta = lig.attribute(inputs=inputs['input_ids'],
                                                baselines=reference_indices,
                                                additional_forward_args=inputs['attention_mask'],
-                                               target=label,
+                                               target=sample['label'],
                                                n_steps=10,
                                                return_convergence_delta=True)
 
@@ -198,24 +222,39 @@ def main():
         print(attributions)
         print(probs)
         print(id2label[label_idx.item()])
-        print(id2label[label])
+        print(dataset.features["label"].int2str(sample['label']))
         print(pad_token)
         print(attributions.sum())
-        print(len(sentence))
+        print(len(sample['inputString']))
         print(delta)
 
         text = [tokenizer.decode(x) for x in inputs['input_ids']][0].split(' ')
 
+
+        # TODO
+        # if args.onlyFalse and label_idx =1 label:
+        #     vis_result.append(...)
+        #     numAttr += 1
         # storing couple samples in an array for visualization purposes
         vis_result.append(visualization.VisualizationDataRecord(attributions,
                                                                 prob,
                                                                 id2label[label_idx.item()],
-                                                                id2label[label],
+                                                                id2label[sample['label']],
                                                                 pad_token,
                                                                 attributions.sum(),
                                                                 text,
                                                                 delta))
-    visualization.visualize_text(vis_result)
+        numAttr += 1
+        if numAttr >= args.numSamples:
+            break
+    data = visualization.visualize_text(vis_result)
+    # print(data.data)
+    with open("data.html", "w") as file:
+        file.write(data.data)
+
+    webbrowser.open_new('data.html')
+
+
 
 
 if __name__ == '__main__':
