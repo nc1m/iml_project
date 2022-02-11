@@ -79,6 +79,11 @@ BASELINE_TYPES = ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
 
 
 def parse_args():
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
     parser = argparse.ArgumentParser(description='TODO: Add general description AND add model and baseline type description here (why here? because newlines are possible here.\ndemo1\ndemo2)', formatter_class=argparse.RawDescriptionHelpFormatter)  # TODO read description
     parser.add_argument('-m', '--model',
                         default='sentimentSST2',
@@ -101,6 +106,14 @@ def parse_args():
 
 
 def p_special_tokens(tokenizer):
+    """[summary]
+
+    Args:
+        tokenizer ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
     if tokenizer._bos_token is not None:
         print(tokenizer.bos_token, tokenizer.encode(tokenizer.bos_token))
     if tokenizer._eos_token is not None:
@@ -119,6 +132,21 @@ def p_special_tokens(tokenizer):
 
 #Calculates the attribution and appends to visualizer
 def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result):
+    """[summary]
+
+    Args:
+        token_reference ([type]): [description]
+        inputs ([type]): [description]
+        sample ([type]): [description]
+        fig ([type]): [description]
+        probs ([type]): [description]
+        tokenizer ([type]): [description]
+        id2label ([type]): [description]
+        label_idx ([type]): [description]
+        pad_token ([type]): [description]
+        vis_result ([type]): [description]
+    """
+
     reference_indices = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
 
     # for key in inputs:
@@ -163,6 +191,16 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
 
 #TODO: Add other Baseline-Techniques: 'maxDist', 'blurred', 'uniform', 'gaussian'
 def flexible_integraded_gradients(forward, embeddings, args):
+    """[summary]
+
+    Args:
+        forward ([type]): [description]
+        embeddings ([type]): [description]
+        args ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
     
     if args.baselineType == BASELINE_TYPES[0]:
         return LayerIntegratedGradients(forward, embeddings)
