@@ -117,12 +117,54 @@ def p_special_tokens(tokenizer):
         print(tokenizer.mask_token, tokenizer.encode(tokenizer.mask_token))
     return None
 
+def calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2label, label_idx, pad_token, vis_result):
+    reference_indices = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
+
+    # for key in inputs:
+    #     inputs[key] = inputs[key].unsqueeze(0)
+    # print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
+    # print('reference_indices.shape:', reference_indices.shape)
+    # print(inputs['input_ids'].dtype)
+    # print(reference_indices.dtype)
+    # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
+    attributions_ig, delta = lig.attribute(inputs=inputs['input_ids'],
+                                        baselines=reference_indices,
+                                        additional_forward_args=inputs['attention_mask'],
+                                        target=sample['label'],
+                                        n_steps=10,
+                                        return_convergence_delta=True)
+
+    attributions = attributions_ig.sum(dim=2).squeeze(0)
+    attributions = attributions / torch.norm(attributions)
+    attributions = attributions.cpu().detach().numpy()
+
+    prob = torch.max(probs).item()
+    # print(attributions)
+    # print(probs)
+    # print(id2label[label_idx.item()])
+    # print(dataset.features["label"].int2str(sample['label']))
+    # print(pad_token)
+    # print(attributions.sum())
+    # print(len(sample['inputString']))
+    # print(delta)
+
+    text = [tokenizer.decode(x) for x in inputs['input_ids']][0].split(' ')
+        
+    vis_result.append(visualization.VisualizationDataRecord(attributions,
+                                                        prob,
+                                                        id2label[label_idx.item()],
+                                                        id2label[sample['label']],
+                                                        pad_token,
+                                                        attributions.sum(),
+                                                        text,
+                                                        delta))
 
 def main():
     set_seed(42)
     args = parse_args()
     print(args)
     use_cuda = False
+    
     if torch.cuda.is_available() and not args.no_cuda:
         pass
         # use_cuda = True
@@ -137,7 +179,7 @@ def main():
         model = model.cuda()
     model.eval()
 
-    # Load tokenizer and get pad token
+    # Load tokenizer and get pad tokenls
     tokenizer = AutoTokenizer.from_pretrained(MODEL_CHOICES[args.model])
     if tokenizer._pad_token is not None:
         pad_token = tokenizer.pad_token
@@ -174,79 +216,44 @@ def main():
     # print(dataset.features['label']._int2str)
     # print(dataset.features['label']._str2int)
 
-    print(dataset.info.features)
-    print(dataset[0])
+    #print(dataset.info.features)
+    #print(dataset[0])
 
     vis_result = []
     numAttr = 0
     for sample in dataset:
-        print(sample)
+        #print(sample)
         inputs = tokenizer(sample['inputString'],
                            padding=True,
                            truncation=True,
                            max_length=512,
                            return_tensors="pt")
-        print(f'INPUTS:\n {inputs}')
+        #print(f'INPUTS:\n {inputs}')
 
         model.zero_grad()
         if use_cuda:
             inputs = inputs.cuda()
         outputs = model(**inputs)
-        print(outputs)
+        #print(outputs)
         probs = torch.softmax(outputs.logits, dim=1)
-        print(probs)
+        #print(probs)
         label_idx = torch.argmax(probs, dim=1)
-        print(label_idx)
-        print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
-        reference_indices = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
+        #print("label_idx",label_idx)
+        #print("inputs['input_ids'].shape:", inputs['input_ids'].shape)        
 
-        # for key in inputs:
-        #     inputs[key] = inputs[key].unsqueeze(0)
-        # print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
-        # print('reference_indices.shape:', reference_indices.shape)
-        # print(inputs['input_ids'].dtype)
-        # print(reference_indices.dtype)
-        # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
-        attributions_ig, delta = lig.attribute(inputs=inputs['input_ids'],
-                                               baselines=reference_indices,
-                                               additional_forward_args=inputs['attention_mask'],
-                                               target=sample['label'],
-                                               n_steps=10,
-                                               return_convergence_delta=True)
-
-        attributions = attributions_ig.sum(dim=2).squeeze(0)
-        attributions = attributions / torch.norm(attributions)
-        attributions = attributions.cpu().detach().numpy()
-
-        prob = torch.max(probs).item()
-        print(attributions)
-        print(probs)
-        print(id2label[label_idx.item()])
-        print(dataset.features["label"].int2str(sample['label']))
-        print(pad_token)
-        print(attributions.sum())
-        print(len(sample['inputString']))
-        print(delta)
-
-        text = [tokenizer.decode(x) for x in inputs['input_ids']][0].split(' ')
-
-
-        # TODO
-        # if args.onlyFalse and label_idx =1 label:
-        #     vis_result.append(...)
-        #     numAttr += 1
-        # storing couple samples in an array for visualization purposes
-        vis_result.append(visualization.VisualizationDataRecord(attributions,
-                                                                prob,
-                                                                id2label[label_idx.item()],
-                                                                id2label[sample['label']],
-                                                                pad_token,
-                                                                attributions.sum(),
-                                                                text,
-                                                                delta))
+        #TODO: DELETE THIS######
+        sample['label']+=1
+        ########################
+        print( id2label[label_idx.item()], id2label[sample['label']])
+        if args.onlyFalse and id2label[label_idx.item()] != id2label[sample['label']]:
+            calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
+        elif not args.onlyFalse:
+            calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
+            
         numAttr += 1
         if numAttr >= args.numSamples:
             break
+        
     data = visualization.visualize_text(vis_result)
     # print(data.data)
     with open("data.html", "w") as file:
