@@ -117,7 +117,7 @@ def p_special_tokens(tokenizer):
         print(tokenizer.mask_token, tokenizer.encode(tokenizer.mask_token))
     return None
 
-def calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2label, label_idx, pad_token, vis_result):
+def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result):
     reference_indices = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
 
     # for key in inputs:
@@ -127,7 +127,7 @@ def calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2l
     # print(inputs['input_ids'].dtype)
     # print(reference_indices.dtype)
     # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
-    attributions_ig, delta = lig.attribute(inputs=inputs['input_ids'],
+    attributions_ig, delta = fig.attribute(inputs=inputs['input_ids'],
                                         baselines=reference_indices,
                                         additional_forward_args=inputs['attention_mask'],
                                         target=sample['label'],
@@ -158,6 +158,25 @@ def calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2l
                                                         attributions.sum(),
                                                         text,
                                                         delta))
+
+
+#TODO: Add other Baseline-Techniques: 'maxDist', 'blurred', 'uniform', 'gaussian'
+def flexible_integraded_gradients(forward, embeddings, args):
+    
+    if args.baselineType == BASELINE_TYPES[0]:
+        return LayerIntegratedGradients(forward, embeddings)
+    elif args.baselineType == BASELINE_TYPES[1]:
+        None
+    elif args.baselineType == BASELINE_TYPES[2]:
+        None
+    elif args.baselineType == BASELINE_TYPES[3]:
+        None
+    elif args.baselineType == BASELINE_TYPES[4]:
+        None
+
+    return LayerIntegratedGradients(forward, embeddings)
+
+
 
 def main():
     set_seed(42)
@@ -208,7 +227,8 @@ def main():
         # print(label_idx)
         # return label_idx.unsqueeze(0)
 
-    lig = LayerIntegratedGradients(custom_forward, model.get_input_embeddings())
+
+    fig = flexible_integraded_gradients(custom_forward, model.get_input_embeddings())
 
     dataset = bert_datasets.build_dataset(args.model, tokenizer)
     dataset = dataset.shuffle()
@@ -246,9 +266,9 @@ def main():
         ########################
         print( id2label[label_idx.item()], id2label[sample['label']])
         if args.onlyFalse and id2label[label_idx.item()] != id2label[sample['label']]:
-            calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
+            calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
         elif not args.onlyFalse:
-            calc_Attribution(token_reference, inputs, sample,lig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
+            calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
             
         numAttr += 1
         if numAttr >= args.numSamples:
