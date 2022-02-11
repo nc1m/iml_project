@@ -117,6 +117,7 @@ def p_special_tokens(tokenizer):
         print(tokenizer.mask_token, tokenizer.encode(tokenizer.mask_token))
     return None
 
+#Calculates the attribution and appends to visualizer
 def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result):
     reference_indices = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
 
@@ -228,7 +229,7 @@ def main():
         # return label_idx.unsqueeze(0)
 
 
-    fig = flexible_integraded_gradients(custom_forward, model.get_input_embeddings())
+    fig = flexible_integraded_gradients(custom_forward, model.get_input_embeddings(), args)
 
     dataset = bert_datasets.build_dataset(args.model, tokenizer)
     dataset = dataset.shuffle()
@@ -264,7 +265,7 @@ def main():
         #TODO: DELETE THIS######
         sample['label']+=1
         ########################
-        print( id2label[label_idx.item()], id2label[sample['label']])
+        #print( id2label[label_idx.item()], id2label[sample['label']])
         if args.onlyFalse and id2label[label_idx.item()] != id2label[sample['label']]:
             calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
         elif not args.onlyFalse:
