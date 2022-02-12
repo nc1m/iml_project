@@ -22,6 +22,9 @@ from captum.attr import TokenReferenceBase
 from captum.attr import LayerIntegratedGradients
 from captum.attr import visualization
 
+#from orig_ig import IntegratedGradients
+from customized_lig import CustomizedLayerIntegratedGradients
+
 #from IPython.core.display import HTML, display
 
 # special tokens
@@ -148,7 +151,6 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
     """
 
     reference_indices = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
-
     # for key in inputs:
     #     inputs[key] = inputs[key].unsqueeze(0)
     # print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
@@ -156,13 +158,13 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
     # print(inputs['input_ids'].dtype)
     # print(reference_indices.dtype)
     # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
-    attributions_ig, delta = fig.attribute(inputs=inputs['input_ids'],
+    attributions_ig, interpolated_input, gradientsAt_interpolation, cummulative_gradients = fig.attribute(inputs=inputs['input_ids'],
                                            baselines=reference_indices,
                                            additional_forward_args=inputs['attention_mask'],
                                            target=sample['label'],
                                            n_steps=10,
                                            return_convergence_delta=True)
-
+    
     attributions = attributions_ig.sum(dim=2).squeeze(0)
     attributions = attributions / torch.norm(attributions)
     attributions = attributions.cpu().detach().numpy()
@@ -203,7 +205,10 @@ def flexible_integraded_gradients(forward, embeddings, args):
     """
 
     if args.baselineType == BASELINE_TYPES[0]:
-        return LayerIntegratedGradients(forward, embeddings)
+        #return LayerIntegratedGradients(forward, embeddings)
+ 
+        return CustomizedLayerIntegratedGradients(forward, embeddings)
+
     elif args.baselineType == BASELINE_TYPES[1]:
         None
     elif args.baselineType == BASELINE_TYPES[2]:
@@ -268,7 +273,6 @@ def main():
 
 
     fig = flexible_integraded_gradients(custom_forward, model.get_input_embeddings(), args)
-
     dataset = bert_datasets.build_dataset(args.model, tokenizer)
     dataset = dataset.shuffle()
     # help(dataset.features['label'])
@@ -288,7 +292,6 @@ def main():
                            max_length=512,
                            return_tensors="pt")
         #print(f'INPUTS:\n {inputs}')
-
         model.zero_grad()
         if use_cuda:
             inputs = inputs.cuda()

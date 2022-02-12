@@ -13,8 +13,6 @@ from captum.attr._utils.common import _reshape_and_sum
 from captum.attr._utils.common import (
     _format_input_baseline,
 )
-import numpy as np
-
 
 class CustomizedIntergratedGradients(IntegratedGradients):
     def __init__(self, forward_func: Callable, multiply_by_inputs: bool = True) -> None:
@@ -22,9 +20,6 @@ class CustomizedIntergratedGradients(IntegratedGradients):
 
     def _attribute(self, inputs: Tuple[Tensor, ...], baselines: Tuple[Union[Tensor, int, float], ...], target: TargetType = None, additional_forward_args: Any = None, n_steps: int = 50, method: str = "gausslegendre", step_sizes_and_alphas: Union[None, Tuple[List[float], List[float]]] = None) -> Tuple[Tensor, ...]:
         
-        # List of attribution value of each alpha steps
-        alpha_attribute_list = np.zeros(len(input), len(alphas))
-
         if step_sizes_and_alphas is None:
             # retrieve step size and scaling factor for specified
             # approximation method
@@ -36,9 +31,9 @@ class CustomizedIntergratedGradients(IntegratedGradients):
         # scale features and compute gradients. (batch size is abbreviated as bsz)
         # scaled_features' dim -> (bsz * #steps x inputs[0].shape[1:], ...)
 
-        for inputcounter, input, baseline in enumerate(zip(inputs, baselines)):
-            for alphacounter, alpha in enumerate(alphas):
-                alpha_attribute_list[inputcounter][alphacounter]=baseline + alpha * (input - baseline)
+        # for inputcounter, input, baseline in enumerate(zip(inputs, baselines)):
+        #     for alphacounter, alpha in enumerate(alphas):
+        #         alpha_gradient_list[inputcounter][alphacounter]=torch.cat(baseline + alpha * (input - baseline),dim=0)
 
         scaled_features_tpl = tuple(
             torch.cat(
@@ -46,7 +41,7 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             ).requires_grad_()
             for input, baseline in zip(inputs, baselines)
         )
-
+       
         additional_forward_args = _format_additional_forward_args(
             additional_forward_args
         )
@@ -70,6 +65,8 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             additional_forward_args=input_additional_args,
         )
 
+        gradientsAt_interpolation = (inputs[0] - baselines[0]) * grads[0]
+
         # flattening grads so that we can multilpy it with step-size
         # calling contiguous to avoid `memory whole` problems
         scaled_grads = [
@@ -77,7 +74,7 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             * torch.tensor(step_sizes).view(n_steps, 1).to(grad.device)
             for grad in grads
         ]
-
+        
         # aggregates across all steps for each tensor in the input tuple
         # total_grads has the same dimensionality as inputs
         total_grads = tuple(
@@ -87,6 +84,13 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             for (scaled_grad, grad) in zip(scaled_grads, grads)
         )
 
+        cummulative_gradients = tuple(
+            _reshape_and_sum(
+                scaled_grad, 1, grad.shape[0] // 1, grad.shape[1:]
+            )
+            for (scaled_grad, grad) in zip(scaled_grads, grads)
+        )
+        
         # computes attribution for each tensor in input tuple
         # attributions has the same dimensionality as inputs
         if not self.multiplies_by_inputs:
@@ -96,4 +100,6 @@ class CustomizedIntergratedGradients(IntegratedGradients):
                 total_grad * (input - baseline)
                 for total_grad, input, baseline in zip(total_grads, inputs, baselines)
             )
-        return attributions, alpha_attribute_list
+
+        #return attributions
+        return attributions, scaled_features_tpl[0], gradientsAt_interpolation, cummulative_gradients[0]
