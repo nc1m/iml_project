@@ -104,6 +104,8 @@ def parse_args():
     parser.add_argument('-n', '--numSamples', default=10, type=int, help='Number of samples')
     parser.add_argument('--onlyFalse', action='store_true', help='Set this if only wrong predicted samples should be shown')
     parser.add_argument('--no_cuda', action='store_true', help='Set this if cuda is availbable, but you do NOT want to use it.')
+    parser.add_argument('--dig', action='store_true', help='Set this if DIG is used instead of IG.')
+
     args = parser.parse_args()
     return args
 
@@ -158,7 +160,7 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
     # print(inputs['input_ids'].dtype)
     # print(reference_indices.dtype)
     # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
-    attributions_ig, interpolated_input, gradientsAt_interpolation, cummulative_gradients = fig.attribute(inputs=inputs['input_ids'],
+    attributions_ig, delta, interpolated_input, gradientsAt_interpolation, cummulative_gradients = fig.attribute(inputs=inputs['input_ids'],
                                            baselines=reference_indices,
                                            additional_forward_args=inputs['attention_mask'],
                                            target=sample['label'],
@@ -189,6 +191,7 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
                                                         attributions.sum(),
                                                         text,
                                                         delta))
+ 
 
 
 #TODO: Add other Baseline-Techniques: 'maxDist', 'blurred', 'uniform', 'gaussian'
@@ -206,8 +209,7 @@ def flexible_integraded_gradients(forward, embeddings, args):
 
     if args.baselineType == BASELINE_TYPES[0]:
         #return LayerIntegratedGradients(forward, embeddings)
- 
-        return CustomizedLayerIntegratedGradients(forward, embeddings)
+        return CustomizedLayerIntegratedGradients(forward, embeddings, args.dig)
 
     elif args.baselineType == BASELINE_TYPES[1]:
         None
@@ -273,6 +275,7 @@ def main():
 
 
     fig = flexible_integraded_gradients(custom_forward, model.get_input_embeddings(), args)
+
     dataset = bert_datasets.build_dataset(args.model, tokenizer)
     dataset = dataset.shuffle()
     # help(dataset.features['label'])

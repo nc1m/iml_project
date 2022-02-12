@@ -10,15 +10,13 @@ from captum._utils.common import (
 from captum._utils.typing import TargetType
 from captum.attr._utils.approximation_methods import approximation_parameters
 from captum.attr._utils.common import _reshape_and_sum
-from captum.attr._utils.common import (
-    _format_input_baseline,
-)
+
 
 class CustomizedIntergratedGradients(IntegratedGradients):
     def __init__(self, forward_func: Callable, multiply_by_inputs: bool = True) -> None:
         IntegratedGradients.__init__(self, forward_func, multiply_by_inputs)
 
-    def _attribute(self, inputs: Tuple[Tensor, ...], baselines: Tuple[Union[Tensor, int, float], ...], target: TargetType = None, additional_forward_args: Any = None, n_steps: int = 50, method: str = "gausslegendre", step_sizes_and_alphas: Union[None, Tuple[List[float], List[float]]] = None) -> Tuple[Tensor, ...]:
+    def _attribute(self, inputs: Tuple[Tensor, ...], baselines: Tuple[Union[Tensor, int, float], ...], target: TargetType = None, additional_forward_args: Any = None, n_steps: int = 50, method: str = "gausslegendre", step_sizes_and_alphas: Union[None, Tuple[List[float], List[float]]] = None, return_convergence_delta:bool = False) -> Tuple[Tensor, ...]:
         
         if step_sizes_and_alphas is None:
             # retrieve step size and scaling factor for specified
@@ -102,4 +100,16 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             )
 
         #return attributions
+        if return_convergence_delta:
+            start_point, end_point = baselines, inputs
+            # computes approximation error based on the completeness axiom
+            delta = self.compute_convergence_delta(
+                attributions,
+                start_point,
+                end_point,
+                additional_forward_args=additional_forward_args,
+                target=target,
+            )
+            return attributions, delta, scaled_features_tpl[0], gradientsAt_interpolation, cummulative_gradients[0]
         return attributions, scaled_features_tpl[0], gradientsAt_interpolation, cummulative_gradients[0]
+

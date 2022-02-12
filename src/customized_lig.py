@@ -23,7 +23,7 @@ from torch import Tensor
 from torch.nn.parallel.scatter_gather import scatter
 
 from customized_ig import CustomizedIntergratedGradients
-
+from dig import DiscretetizedIntegratedGradients
 
 
 class CustomizedLayerIntegratedGradients(LayerAttribution, GradientAttribution):
@@ -33,14 +33,15 @@ class CustomizedLayerIntegratedGradients(LayerAttribution, GradientAttribution):
         self,
         forward_func: Callable,
         layer: ModuleOrModuleList,
+        dig: bool,
         device_ids: Union[None, List[int]] = None,
         multiply_by_inputs: bool = True,
     ) -> None:
-       
         LayerAttribution.__init__(self, forward_func, layer, device_ids=device_ids)
         GradientAttribution.__init__(self, forward_func)
         #self.ig = IntegratedGradients(forward_func, multiply_by_inputs)
-        self.ig =CustomizedIntergratedGradients(forward_func, multiply_by_inputs)
+        self.dig = dig
+        self.ig = DiscretetizedIntegratedGradients(forward_func, multiply_by_inputs) if dig else CustomizedIntergratedGradients(forward_func, multiply_by_inputs)
 
         if isinstance(layer, list) and len(layer) > 1:
             warnings.warn(
@@ -428,17 +429,31 @@ class CustomizedLayerIntegratedGradients(LayerAttribution, GradientAttribution):
             if additional_forward_args is not None
             else inps
         )
-        attributions, interpolated_input, gradientsAt_interpolation, cummulative_gradients= self.ig.attribute.__wrapped__(  # type: ignore
-            self.ig,  # self
-            inputs_layer,
-            baselines=baselines_layer,
-            target=target,
-            additional_forward_args=all_inputs,
-            n_steps=n_steps,
-            method=method,
-            internal_batch_size=internal_batch_size,
-            return_convergence_delta=False,
-        )
+
+        attributions, interpolated_input, gradientsAt_interpolation, cummulative_gradients = None, None, None, None
+        if self.dig:
+            attributions, interpolated_input, gradientsAt_interpolation, cummulative_gradients= self.ig.attribute.__wrapped__(  # type: ignore
+                self.ig,  # self
+                inputs_layer,
+                target=target,
+                additional_forward_args=all_inputs,
+                n_steps=n_steps,
+                return_convergence_delta=False,
+            )
+            
+        else:
+            attributions, interpolated_input, gradientsAt_interpolation, cummulative_gradients= self.ig.attribute.__wrapped__(  # type: ignore
+                self.ig,  # self
+                inputs_layer,
+                baselines=baselines_layer,
+                target=target,
+                additional_forward_args=all_inputs,
+                n_steps=n_steps,
+                method=method,
+                internal_batch_size=internal_batch_size,
+                return_convergence_delta=False,
+            )
+
 
         # handle multiple outputs
         output: List[Tuple[Tensor, ...]] = [
@@ -460,7 +475,7 @@ class CustomizedLayerIntegratedGradients(LayerAttribution, GradientAttribution):
                 additional_forward_args=additional_forward_args,
                 target=target,
             )
-            return _format_outputs(isinstance(self.layer, list), output), interpolated_input, gradientsAt_interpolation, cummulative_gradients
+            return _format_outputs(isinstance(self.layer, list), output), delta, interpolated_input, gradientsAt_interpolation, cummulative_gradients
         return _format_outputs(isinstance(self.layer, list), output), interpolated_input, gradientsAt_interpolation, cummulative_gradients
 
     def has_convergence_delta(self) -> bool:
