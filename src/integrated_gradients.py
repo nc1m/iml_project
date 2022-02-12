@@ -55,7 +55,7 @@ MODEL_CHOICES['sentimentSST2'] = 'distilbert-base-uncased-finetuned-sst-2-englis
 
 # Predicts 1 star/2 stars/3 stars/4 stars/ 5 stars sentiment for product reviews (5 classes)
 # https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment?text=I+like+you.+I+love+you
-MODEL_CHOICES['proudctReviews5'] = 'nlptown/bert-base-multilingual-uncased-sentiment'
+MODEL_CHOICES['productReviews5'] = 'nlptown/bert-base-multilingual-uncased-sentiment'
 
 # Predicts negative/positive/neutral sentiment for financial texts (3 classes)
 # https://huggingface.co/ProsusAI/finbert?text=Stocks+rallied+and+the+British+pound+gained.
@@ -157,11 +157,11 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
     # print(reference_indices.dtype)
     # attributions_ig, delta = lig.attribute(inputs=(inputs['input_ids'], inputs['attention_mask']), baselines=reference_indices, target=label, n_steps=500, return_convergence_delta=True)
     attributions_ig, delta = fig.attribute(inputs=inputs['input_ids'],
-                                        baselines=reference_indices,
-                                        additional_forward_args=inputs['attention_mask'],
-                                        target=sample['label'],
-                                        n_steps=10,
-                                        return_convergence_delta=True)
+                                           baselines=reference_indices,
+                                           additional_forward_args=inputs['attention_mask'],
+                                           target=sample['label'],
+                                           n_steps=10,
+                                           return_convergence_delta=True)
 
     attributions = attributions_ig.sum(dim=2).squeeze(0)
     attributions = attributions / torch.norm(attributions)
@@ -174,11 +174,11 @@ def calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2l
     # print(dataset.features["label"].int2str(sample['label']))
     # print(pad_token)
     # print(attributions.sum())
-    # print(len(sample['inputString']))
+    # print(len(sample['input_string']))
     # print(delta)
 
     text = [tokenizer.decode(x) for x in inputs['input_ids']][0].split(' ')
-        
+
     vis_result.append(visualization.VisualizationDataRecord(attributions,
                                                         prob,
                                                         id2label[label_idx.item()],
@@ -201,7 +201,7 @@ def flexible_integraded_gradients(forward, embeddings, args):
     Returns:
         [type]: [description]
     """
-    
+
     if args.baselineType == BASELINE_TYPES[0]:
         return LayerIntegratedGradients(forward, embeddings)
     elif args.baselineType == BASELINE_TYPES[1]:
@@ -222,7 +222,7 @@ def main():
     args = parse_args()
     print(args)
     use_cuda = False
-    
+
     if torch.cuda.is_available() and not args.no_cuda:
         pass
         # use_cuda = True
@@ -282,7 +282,7 @@ def main():
     numAttr = 0
     for sample in dataset:
         #print(sample)
-        inputs = tokenizer(sample['inputString'],
+        inputs = tokenizer(sample['input_string'],
                            padding=True,
                            truncation=True,
                            max_length=512,
@@ -298,21 +298,19 @@ def main():
         #print(probs)
         label_idx = torch.argmax(probs, dim=1)
         #print("label_idx",label_idx)
-        #print("inputs['input_ids'].shape:", inputs['input_ids'].shape)        
+        #print("inputs['input_ids'].shape:", inputs['input_ids'].shape)
 
-        #TODO: DELETE THIS######
-        sample['label']+=1
-        ########################
+
         #print( id2label[label_idx.item()], id2label[sample['label']])
         if args.onlyFalse and id2label[label_idx.item()] != id2label[sample['label']]:
             calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
         elif not args.onlyFalse:
             calc_Attribution(token_reference, inputs, sample,fig, probs, tokenizer, id2label, label_idx, pad_token, vis_result)
-            
+
         numAttr += 1
         if numAttr >= args.numSamples:
             break
-        
+
     data = visualization.visualize_text(vis_result)
     # print(data.data)
     with open("data.html", "w") as file:

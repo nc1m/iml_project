@@ -11,31 +11,78 @@ DATASET_INFO['productReviews5'] = {'path': 'amazon_reviews_multi', 'name': 'all_
 
 # https://huggingface.co/datasets/financial_phrasebank
 # has no test split
-DATASET_INFO['sentimentFinancial3'] = {'path': 'financial_phrasebank', 'name': 'sentences_allagree', 'split': 'train'}
+DATASET_INFO['sentimentFin3'] = {'path': 'financial_phrasebank', 'name': 'sentences_allagree', 'split': 'train'}
 
 # https://huggingface.co/datasets/emotion
 DATASET_INFO['emotion6'] = {'path': 'emotion', 'split': 'test'}
 
 
 def prepare_sentimentSST2(modelName, tokenizer):
+    """Loads the glue SST test dataset and changes the columns to the standard names.
+    Strangely all the labels consist of -1 (negative) samples and to map them to the model
+    predictions we mapped -1 to 0 which is the model class for negative.
+    """
     # standard columns: input_string, input_ids, attention_mask, label
     dataset = load_dataset(**DATASET_INFO[modelName])
-
-    dataset = dataset.rename_column('sentence', 'inputString')
-    print(dataset['label'])
-    # TODO: change column label to -1=>0
-    # def adjust_labels(e):
-    #     e['label'] = [sentiment + 1 for sentiment in e['label']] #e['label'] + 1
-    #     return e['label']
-    # change -1 labels to 0 for conistency
-    # dataset = dataset.map(lambda e: e['label'] + 1)
-    # print(dataset['label'])
+    dataset = dataset.rename_column('sentence', 'input_string')
+    dataset = dataset.map(lambda sample: {'label': sample['label'] + 1})
     # moved tokenization of inputString to integrated_gradients.py
     # https://huggingface.co/docs/transformers/v4.16.2/en/main_classes/tokenizer#transformers.PreTrainedTokenizerBase.__call__
     #dataset = dataset.map(lambda e: tokenizer(e['inputString']))#, truncation=True, padding='max_length'), batched=True)
     return dataset
 
+def prepare_productReviews5(modelName):
+    dataset = load_dataset(**DATASET_INFO[modelName])
+    dataset = dataset.rename_column('stars', 'label')
+    # Concatenate review title and review body into input_string column
+    dataset = dataset.map(lambda sample: {'input_string': sample['review_title'] + ' ' + sample['review_body']})
+    # Convert to model prediction space 0-4 instead of 1-5 stars
+    dataset = dataset.map(lambda sample: {'label': sample['label'] - 1})
+    # TODO? use dataset.filter to remove unkonwn language reviews
+    return dataset
 
+
+def prepare_sentimentFin3(modelName):
+    """Loads the financial_phrasebank dataset, changes the colmun names to the
+    standard names and changes the labels to the specifications of the model
+    names.
+    label_id = original label => model label
+    0 = negative => positive
+    1 = neutral => negative
+    2 = positive => neutral
+    """
+    def convert_to_temp_labels(sample):
+        """Converts the labels to temporary labels.
+        """
+        if sample['label'] == 2:
+            sample['label'] = 4
+        elif sample['label'] == 0:
+            sample['label'] = 5
+        elif sample['label'] == 1:
+            sample['label'] = 6
+        return sample
+
+    def convert_to_model_labels(sample):
+        """Converts the temporary labels to model labels
+        """
+        if sample['label'] == 4:
+            sample['label'] = 0
+        elif sample['label'] == 5:
+            sample['label'] = 1
+        elif sample['label'] == 6:
+            sample['label'] = 2
+        return sample
+
+    dataset = load_dataset(**DATASET_INFO[modelName])
+    dataset = dataset.rename_column('sentence', 'input_string')
+    dataset = dataset.map(convert_to_temp_labels)
+    dataset = dataset.map(convert_to_model_labels)
+    return dataset
+
+def prepare_emotion6(modelName):
+    dataset = load_dataset(**DATASET_INFO[modelName])
+    dataset = dataset.rename_column('text', 'input_string')
+    return dataset
 
 
 def build_dataset(modelName, tokenizer):
@@ -44,8 +91,12 @@ def build_dataset(modelName, tokenizer):
     """
     if modelName == 'sentimentSST2':
         dataset = prepare_sentimentSST2(modelName, tokenizer)
-    elif modelName == 'TODO':
-        pass
+    elif modelName == 'productReviews5':
+        dataset = prepare_productReviews5(modelName)
+    elif modelName == 'sentimentFin3':
+        dataset = prepare_sentimentFin3(modelName)
+    elif modelName == 'emotion6':
+        dataset = prepare_emotion6(modelName)
     else:
         raise NameError(f'Dataset for model "{modelName}" not implemented')
 
