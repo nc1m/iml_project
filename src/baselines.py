@@ -1,25 +1,26 @@
-from lib2to3.pgen2 import token
 from typing import List
 import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-#from torchvision.transforms.functional import gaussian_blur
-
+from torchvision.transforms.functional import gaussian_blur
+from tokenizers import decoders
 
 # Maximum distance baseline = Choose word embedding which is most far away (L1-wise) from the input
 # Blurred baseline = Blurres out feature informations
 # Uniform baseline = Sample a random uniform embedding
-# Gaussian baseline = Sample from a gaussian around original embedding with some std. sigma (hyperparameter)
+# Gaussian baseline = Sample from a gaussian around original embedding
+# with some std. sigma (hyperparameter)
+
 
 BASELINE_TYPES = ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
 
 
 
 class Baseline:
-    def __init__(self,modelName):
+    def __init__(self,model_name):
 
-        self.model_ = AutoModelForSequenceClassification.from_pretrained(modelName)
-        self.tokenizer_ = AutoTokenizer.from_pretrained(modelName)
+        self.model_ = AutoModelForSequenceClassification.from_pretrained(model_name)
+        self.tokenizer_ = AutoTokenizer.from_pretrained(model_name)
 
         self.full_embs = self.model_.get_input_embeddings().weight.detach().clone()
         self.voc = self.tokenizer_.get_vocab()
@@ -29,7 +30,7 @@ class Baseline:
             self.std = torch.std(self.full_embs)
             self.lowest_emb_val =  self.full_embs.min(0).values
             self.highest_emb_val = self.full_embs.max(0).values
-            self.between = (self.highest_emb_val - self.lowest_emb_val ) / 2
+            self.between = (self.highest_emb_val + self.lowest_emb_val ) / 2
 
     def baseline_by_type(self,baseline_type : str,input : str):
         """Return a list baseline tokens
@@ -50,7 +51,7 @@ class Baseline:
         elif baseline_type == BASELINE_TYPES[4]:
             return self.gaussian_embedding(input)
     
-    def baseline_by_type(self,baseline_type : str,input : List):
+    def baseline_by_type(self,baseline_type : str,input : torch.Tensor):
         """Return a list baseline tokens
 
         Args:
@@ -59,7 +60,8 @@ class Baseline:
         Returns:
             list: List of baseline tokens
         """
-        input = ' '.join(self.tokenizer_.decode(input))
+
+        assert len(input.shape) == 1,"Input tensor should have shape dimension 1"
 
         if baseline_type == BASELINE_TYPES[1]:
             return self.maximum_distance_embedding(input)
@@ -71,22 +73,21 @@ class Baseline:
             return self.gaussian_embedding(input)
 
     
-    def maximum_distance_embedding(self, sentence : str):
+    def maximum_distance_embedding(self, sentence : torch.Tensor):
         """[summary]
 
         Args:
             sentence (torch.Tensor): [description]
         """
-        sentence = self.tokenizer_.tokenize(sentence)
 
         baseline_sentence = []
         for word in sentence:
 
-            if word in self.tokenizer_.all_special_tokens:
-                baseline_sentence.append(torch.tensor(self.tokenizer_.encode(word)[1]))
+            if word in self.tokenizer_.all_special_ids:
+                baseline_sentence.append(word)
                 continue
 
-            word_emb = self.model_.get_input_embeddings()(torch.tensor(self.tokenizer_.encode(word)[1]))
+            word_emb = self.model_.get_input_embeddings()(word)
 
             # Set all values to the maximum if value is closer to the minimum (since we want max distance)
             masked = word_emb > self.between
@@ -98,46 +99,44 @@ class Baseline:
         
         return baseline_sentence
     
-    def uniform_embedding(self, sentence : str):
+    def uniform_embedding(self, sentence : torch.Tensor):
         """ Randomly (uniform) select a token for each word in the sentence
 
         Args:
             sentence (str): [description]
         """
-        sentence = self.tokenizer_.tokenize(sentence)
 
         baseline_sentence = []
         for word in sentence:
 
-            if word in self.tokenizer_.all_special_tokens:
-                baseline_sentence.append(torch.tensor(self.tokenizer_.encode(word)[1]))
+            if word in self.tokenizer_.all_special_ids:
+                baseline_sentence.append(word)
                 continue
             
-            baseline_sentence.append(np.random.randint(1,len(self.voc)))
+            baseline_sentence.append(torch.Tensor(np.random.randint(1,len(self.voc))))
         return baseline_sentence
 
-    def blur_embedding(self, sentence : str):
+    def blur_embedding(self, sentence : torch.Tensor):
         """_summary_
 
         Args:
             sentence (str): _description_
         """
-        sentence = self.tokenizer_.tokenize(sentence)
 
         baseline_sentence = []
         for word in sentence:
 
-            if word in self.tokenizer_.all_special_tokens:
-                baseline_sentence.append(torch.tensor(self.tokenizer_.encode(word)[1]))
+            if word in self.tokenizer_.all_special_ids:
+                baseline_sentence.append(word)
                 continue
 
-            word_emb = self.model_.get_input_embeddings()(torch.tensor(self.tokenizer_.encode(word)[1]))
+            word_emb = self.model_.get_input_embeddings()(word)
 
             baseline_sentence.append(self.get_nearest_word(word_emb))
         
         return baseline_sentence
     
-    def gaussian_embedding(self,sentence : str) -> int:
+    def gaussian_embedding(self,sentence : torch.Tensor) -> int:
         """_summary_
 
         Args:
@@ -146,13 +145,12 @@ class Baseline:
         Returns:
             int: _description_
         """
-        sentence = self.tokenizer_.tokenize(sentence)
 
         baseline_sentence = []
         for word in sentence:
             
-            if word in self.tokenizer_.all_special_tokens:
-                baseline_sentence.append(torch.tensor(self.tokenizer_.encode(word)[1]))
+            if word in self.tokenizer_.all_special_ids:
+                baseline_sentence.append(word)
                 continue
 
             sampled_emb = torch.Tensor(np.random.normal(self.mean,self.std,size=self.full_embs.shape[1]))
@@ -187,26 +185,30 @@ class Baseline:
 # base = Baseline("distilbert-base-uncased-finetuned-sst-2-english")
 
 
-model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
-tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
+# model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
+# tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
 
-# print(tokenizer.decode(base.maximum_distance_embedding("I love you!")))
+
+# print(' '.join(tokenizer.decode(base.maximum_distance_embedding("I really hate you"))))
+
 # print(tokenizer.decode(base.gaussian_embedding("I love you!")))
 # print(tokenizer.decode(base.uniform_embedding("I love you!")))
 
 
-
-# voc = tokenizer.get_vocab()
 # full_emb = model.get_input_embeddings().weight.detach().clone()
 # mean = torch.mean(full_emb)
 # va = torch.std(full_emb)
-# enc = tokenizer.encode("House")[1]
-# emb = model.get_input_embeddings()(torch.tensor(enc))
-
 # samp = torch.Tensor(np.random.normal(mean,va,size=full_emb.shape[1]))
-# print(samp.shape)
-#print(emb.unsqueeze(0).shape)
-# emb = gaussian_blur(emb.unsqueeze(0))
+
+# voc = tokenizer.get_vocab()
+
+# enc = tokenizer.encode("House")[1]
+# emb = model.get_input_embeddings()(torch.tensor(enc)).detach().clone()
+
+
+
+# emb = gaussian_blur(emb.ToTensor(),kernel_size=[1,3])
+# print(emb)
 
 
 # print(emb)
