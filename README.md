@@ -38,10 +38,9 @@ python main.py -h
     ├── src                     
     │   ├── baselines.py                    # construct different baselines
     │   └── bert_datasets.py                
-    │   └── customized_ig.py                #customized integraded gradients
-    │   └── customized_lig.py               #customized layer integraded gradients
-    │   └── intergrated_gradients.py
-    │   └── utils.py                            
+    │   └── customized_ig.py                # customized integraded gradients
+    │   └── customized_lig.py               # customized layer integraded gradients
+    │   └── utils.py                        # helper function   
     │   └── test_baselines.py               # unittest for baselines
     ├── main.py                             # main
     └── requirements.txt                    # Dependencies
