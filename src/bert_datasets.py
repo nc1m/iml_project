@@ -17,10 +17,17 @@ DATASET_INFO['sentimentFin3'] = {'path': 'financial_phrasebank', 'name': 'senten
 DATASET_INFO['emotion6'] = {'path': 'emotion', 'split': 'test'}
 
 
-def prepare_sentimentSST2(modelName, tokenizer):
+def prepare_sentimentSST2(modelName: str, tokenizer):
     """Loads the glue SST test dataset and changes the columns to the standard names.
     Strangely all the labels consist of -1 (negative) samples and to map them to the model
     predictions we mapped -1 to 0 which is the model class for negative.
+
+    Args:
+        modelName (str): model name to be load
+        tokenizer: Used pretrained tokenizer
+
+    Returns:
+        _type_: Dataset
     """
     # standard columns: input_string, input_ids, attention_mask, label
     dataset = load_dataset(**DATASET_INFO[modelName])
@@ -31,7 +38,16 @@ def prepare_sentimentSST2(modelName, tokenizer):
     #dataset = dataset.map(lambda e: tokenizer(e['inputString']))#, truncation=True, padding='max_length'), batched=True)
     return dataset
 
+
 def prepare_productReviews5(modelName):
+    """Setup dataset for product review data
+
+    Args:
+        modelName: model name to be load
+
+    Returns:
+        _type_: Dataset
+    """
     dataset = load_dataset(**DATASET_INFO[modelName])
     dataset = dataset.rename_column('stars', 'label')
     # Concatenate review title and review body into input_string column
@@ -105,17 +121,16 @@ def build_dataset(modelName, tokenizer):
     return dataset
 
 
-
 def print_dataset_infos(datasetInfo):
+    """Reveal informations for a dataset
+
+    Args:
+        datasetInfo (_type_): dataset informations
+    """
     for key in datasetInfo:
         print(key)
         dataset_builder = load_dataset(**datasetInfo[key])
         print(dataset_builder.info.features)
-        # print(dataset_builder.split)
-        # # print(dataset_builder.cache_dir)
-        # # print(dataset_builder.info.features)
-        # print(dataset_builder.info.splits)
-        print()
 
 
 if __name__ == '__main__':
