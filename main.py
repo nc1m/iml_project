@@ -39,6 +39,22 @@ MODEL_CHOICES['emotion6'] = 'bhadresh-savani/distilbert-base-uncased-emotion'
 
 
 def create_baseline(blType, padTokenId, inputString, inputs, tokenizer, model):
+    """Choose a baseline and creates it according to an input
+
+    Args:
+        blType (_type_): constant,uniform,gaussian or maxdist
+        padTokenId (_type_): Id for [pad]
+        inputString (_type_): Proposed input as text
+        inputs (_type_): Input ids
+        tokenizer (_type_): Used pretrained tokenizer
+        model (_type_): Used pretrained model
+
+    Raises:
+        NameError: Raised if baseline type not match witch proposed baselines
+
+    Returns:
+        torch.Tensor: Ids for the baseline
+    """
     if blType == 'constant':
         token_reference = TokenReferenceBase(reference_token_idx=padTokenId)
         bl = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
@@ -52,7 +68,17 @@ def create_baseline(blType, padTokenId, inputString, inputs, tokenizer, model):
         raise NameError(f'Baseline type {blType} not implemented')
     return bl
 
+
 def summarize_attr(attr, n_steps):
+    """Sum up all attribution and return the normalized sum
+
+    Args:
+        attr: Calculated attributions
+        n_steps: number of steps
+
+    Returns:
+        _type_: normalized sum of attributions
+    """
     newVals = []
     for i in range(n_steps):
         temp = attr[i]
