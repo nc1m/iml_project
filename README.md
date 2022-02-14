@@ -40,7 +40,6 @@ python main.py -h
     │   └── bert_datasets.py                
     │   └── customized_ig.py                #customized integraded gradients
     │   └── customized_lig.py               #customized layer integraded gradients
-    │   └── intergrated_gradients.py
     │   └── utils.py                            
     │   └── test_baselines.py               # unittest for baselines
     ├── main.py                             # main
