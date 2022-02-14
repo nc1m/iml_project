@@ -20,9 +20,10 @@ pip install -r requirements.txt
 
 ### Usage
 The default branch for latest and stable changes is `main`.
+To see a list of commandline options run:
 ```bash
-# Run file
-python example.py
+
+python main.py -h
 
 ```
 
@@ -30,9 +31,9 @@ python example.py
 
     .
     ├── resources
-    │   ├── lecture_slides    
-    │   └── paper                         
-    ├── src                     
+    │   ├── lecture_slides
+    │   └── paper
+    ├── src
     │   ├── integrated_gradients.py
     │   └── iml_project00.ipynb
     │
