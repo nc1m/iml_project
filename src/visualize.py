@@ -206,17 +206,21 @@ def main(args):
         label = sample['label']
         label_pred = label_pred
 
+        print(inputs['input_ids'])
+        intrplTokens = get_closest_id_from_emb(intrplIds, model, '../knn/sentimentSST2_500.pickle')
+        print(intrplTokens)
         # intrplTokens = []
         # for step in intrplIds:
         #     curStep = []
         #     for token_emb in step:
-                # print(token_emb.shape)
-        #         token_id = get_closest_id_from_emb(token_emb, model)
+        #         print(token_emb.shape)
+        #         token_id = get_closest_id_from_emb_old(token_emb, model)
         #         # print(tokenizer.decode(token_id))
         #         curStep.append(tokenizer.decode(token_id))
         #     intrplTokens.append(curStep)
         # print(intrplTokens)
-        intrplTokens = [['[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[unused174]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[unused174]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[unused814]', '[PAD]', '[PAD]', '[PAD]', '[unused174]'], ['[unused174]', '[unused533]', '[PAD]', '[unused814]', '[unused814]', '[unused814]', '[unused533]', '[unused814]', '[PAD]', '[unused155]', '[unused155]', '[unused155]', '[unused23]', '[unused814]', '[unused299]', '[unused814]', '[unused533]', '[unused814]', '[unused155]', '##訁'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]']]
+        exit()
+        #intrplTokens = [['[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[unused174]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[unused174]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[unused814]', '[PAD]', '[PAD]', '[PAD]', '[unused174]'], ['[unused174]', '[unused533]', '[PAD]', '[unused814]', '[unused814]', '[unused814]', '[unused533]', '[unused814]', '[PAD]', '[unused155]', '[unused155]', '[unused155]', '[unused23]', '[unused814]', '[unused299]', '[unused814]', '[unused533]', '[unused814]', '[unused155]', '##訁'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]']]
         intrplTokens_bl[blType] = intrplTokens
 
         gradAtIntrpl = summarize_attr(gradAtIntrpl, args.numSteps)
