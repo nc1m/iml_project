@@ -14,10 +14,31 @@ from captum.attr._utils.common import _reshape_and_sum
 
 class CustomizedIntergratedGradients(IntegratedGradients):
     def __init__(self, forward_func: Callable, multiply_by_inputs: bool = True) -> None:
+        """Create a customized version of IG
+
+        Args:
+            forward_func (Callable): model specific forward function
+            multiply_by_inputs (bool, optional): Set if output should be multiplied by input
+        """
         IntegratedGradients.__init__(self, forward_func, multiply_by_inputs)
 
     def _attribute(self, inputs: Tuple[Tensor, ...], baselines: Tuple[Union[Tensor, int, float], ...], target: TargetType = None, additional_forward_args: Any = None, n_steps: int = 50, method: str = "gausslegendre", step_sizes_and_alphas: Union[None, Tuple[List[float], List[float]]] = None, return_convergence_delta:bool = False) -> Tuple[Tensor, ...]:
-        
+        """Calculates the attributions 
+
+        Args:
+            inputs (Tuple[Tensor, ...]): The input ids
+            baselines (Tuple[Union[Tensor, int, float], ...]): Used baseline 
+            target (TargetType, optional): Target. Defaults to None.
+            additional_forward_args (Any, optional): Add args for forward if needed. Defaults to None.
+            n_steps (int, optional): Number of steps. Defaults to 50.
+            method (str, optional): _description_. Defaults to "gausslegendre".
+            step_sizes_and_alphas (Union[None, Tuple[List[float], List[float]]], optional): Used alphas
+            return_convergence_delta (bool, optional): Additionally returns delta
+
+        Returns:
+            Tuple[Tensor, ...]: Attribution
+        """
+
         if step_sizes_and_alphas is None:
             # retrieve step size and scaling factor for specified
             # approximation method
@@ -39,7 +60,6 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             ).requires_grad_()
             for input, baseline in zip(inputs, baselines)
         )
-       
         additional_forward_args = _format_additional_forward_args(
             additional_forward_args
         )
@@ -99,7 +119,7 @@ class CustomizedIntergratedGradients(IntegratedGradients):
                 for total_grad, input, baseline in zip(total_grads, inputs, baselines)
             )
 
-        #return attributions
+        # return attributions
         if return_convergence_delta:
             start_point, end_point = baselines, inputs
             # computes approximation error based on the completeness axiom
@@ -112,4 +132,3 @@ class CustomizedIntergratedGradients(IntegratedGradients):
             )
             return attributions, delta, scaled_features_tpl[0], gradientsAt_interpolation, cummulative_gradients[0]
         return attributions, scaled_features_tpl[0], gradientsAt_interpolation, cummulative_gradients[0]
-
