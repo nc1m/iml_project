@@ -17,7 +17,6 @@ def get_closest_id_from_emb(emb: torch.Tensor, model, *args):
     embeddings = model.get_input_embeddings().weight.detach().clone()
     minDist = np.inf
     for i, curEmb in enumerate(embeddings):
-        # torch.sqrt(torch.sum((curEmb - emb) ** 2))
         dist = (curEmb - emb).pow(2).sum().sqrt()
         if dist < minDist:
             token_id = i

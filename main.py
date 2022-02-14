@@ -14,7 +14,7 @@ from transformers import AutoTokenizer
 from transformers import AutoModelForSequenceClassification
 
 from src.customized_lig import CustomizedLayerIntegratedGradients
-import src.baseline2
+import src.baselines
 from src.bert_datasets import build_dataset
 from src.utils import get_closest_id_from_emb
 
@@ -43,11 +43,11 @@ def create_baseline(blType, padTokenId, inputString, inputs, tokenizer, model):
         token_reference = TokenReferenceBase(reference_token_idx=padTokenId)
         bl = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
     elif blType == 'uniform':
-        bl = src.baseline2.create_uniform_embedding(inputs['input_ids'][0], tokenizer)
+        bl = src.baselines.create_uniform_embedding(inputs['input_ids'][0], tokenizer)
     elif blType == 'gaussian':
-        bl = src.baseline2.create_gaussian_embedding(inputs['input_ids'][0], tokenizer, model)
+        bl = src.baselines.create_gaussian_embedding(inputs['input_ids'][0], tokenizer, model)
     elif blType == 'maxDist':
-        bl = src.baseline2.create_max_distance_baseline(inputs['input_ids'][0], tokenizer, model)
+        bl = src.baselines.create_max_distance_baseline(inputs['input_ids'][0], tokenizer, model)
     else:
         raise NameError(f'Baseline type {blType} not implemented')
     return bl
