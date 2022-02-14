@@ -15,11 +15,11 @@ from captum.attr import LayerIntegratedGradients
 from transformers import AutoTokenizer
 from transformers import AutoModelForSequenceClassification
 
-from customized_lig import CustomizedLayerIntegratedGradients
-import baseline2  # import Baseline
-from bert_datasets import build_dataset
-from utils import get_closest_id_from_emb
-from start_dig import start_dig
+from src.customized_lig import CustomizedLayerIntegratedGradients
+import src.baseline2  # import Baseline
+from src.bert_datasets import build_dataset
+from src.utils import get_closest_id_from_emb
+#from src.start_dig import start_dig
 
 
 BASELINE_TYPES = ['constant', 'uniform', 'gaussian']  # ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
@@ -41,7 +41,7 @@ MODEL_CHOICES['sentimentFin3'] = 'ProsusAI/finbert'
 MODEL_CHOICES['emotion6'] = 'bhadresh-savani/distilbert-base-uncased-emotion'
 
 
-
+# TODO remove if dig not used
 def create_method(method, forward, input_embeddings):
     if method == 'ig':
         custom_ig = CustomizedLayerIntegratedGradients(forward, input_embeddings)  # LayerIntegratedGradients(forward, input_embeddings)
@@ -58,9 +58,9 @@ def create_baseline(blType, padTokenId, inputString, inputs, tokenizer, model):
         token_reference = TokenReferenceBase(reference_token_idx=padTokenId)
         bl = token_reference.generate_reference(inputs['input_ids'].shape[1], device=inputs['input_ids'].device).unsqueeze(0)
     elif blType == 'uniform':
-        bl = baseline2.create_uniform_embedding(inputs['input_ids'][0], tokenizer)
+        bl = src.baseline2.create_uniform_embedding(inputs['input_ids'][0], tokenizer)
     elif blType == 'gaussian':
-        bl = baseline2.create_gaussian_embedding(inputs['input_ids'][0], tokenizer, model)
+        bl = src.baseline2.create_gaussian_embedding(inputs['input_ids'][0], tokenizer, model)
     elif blType == '':
         pass
     else:

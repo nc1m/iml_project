@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from utils import get_closest_id_from_emb
+from src.utils import get_closest_id_from_emb
 
 
 def create_uniform_embedding(input_ids, tokenizer):

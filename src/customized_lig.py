@@ -22,7 +22,7 @@ from captum.log import log_usage
 from torch import Tensor
 from torch.nn.parallel.scatter_gather import scatter
 
-from customized_ig import CustomizedIntergratedGradients
+from src.customized_ig import CustomizedIntergratedGradients
 
 class CustomizedLayerIntegratedGradients(LayerAttribution, GradientAttribution):
 
