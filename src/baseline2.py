@@ -38,8 +38,8 @@ def create_gaussian_embedding(input_ids, tokenizer, model):
         sentence.append(tokenizer.decode(token_id))
 
     full_embs = model.get_input_embeddings().weight.detach().clone()
-    mean = torch.mean(full_embs)
-    std = torch.std(full_embs)
+    mean = torch.mean(full_embs).cpu()
+    std = torch.std(full_embs).cpu()
     # sentence = tokenizer.tokenize(sentence)
 
     baseline_sentence = []

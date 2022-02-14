@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import torch
 
-def get_closest_id_from_emb_old(emb, model):
+def get_closest_id_from_emb(emb, model, *args):
     """Given an embedding returns the clostest token_id, with regard to it's
     embedding.
     """
@@ -19,7 +19,7 @@ def get_closest_id_from_emb_old(emb, model):
 
 
 
-def get_closest_id_from_emb(intrplEmbs, model, knn_filePath):
+def get_closest_id_from_emb2(intrplEmbs, model, knn_filePath):
     """Given an embedding returns the clostest token_id, with regard to it's
     embedding.
     """
@@ -41,7 +41,7 @@ def get_closest_id_from_emb(intrplEmbs, model, knn_filePath):
     # print(adj[0])
     # print()
     intrplIds = torch.ones((intrplEmbs.shape[:2]))
-    print(intrplIds)
+    # print(intrplIds)
     print(f'intrplIds.shape: {intrplIds.shape}')
     embeddings = model.get_input_embeddings().weight.detach().clone()
     # find initial starting id
@@ -55,7 +55,7 @@ def get_closest_id_from_emb(intrplEmbs, model, knn_filePath):
                 token_id = curId
                 minDist = dist
         intrplIds[0][i_seq] = token_id
-    print(intrplIds)
+    # print(intrplIds)
     print(intrplIds[0])
     # use starting id and knn to build path to end embedding
     # Go over steps
@@ -86,7 +86,7 @@ def get_closest_id_from_emb(intrplEmbs, model, knn_filePath):
                         token_id = cand
                         minDist = dist
             intrplIds[i_step, i_seq] = token_id
-        print(intrplIds)
+
 
 
     exit()

@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 import time
+import logging
 from datetime import timedelta
 
 import numpy as np
@@ -18,6 +19,7 @@ from customized_lig import CustomizedLayerIntegratedGradients
 import baseline2  # import Baseline
 from bert_datasets import build_dataset
 from utils import get_closest_id_from_emb
+
 
 BASELINE_TYPES = ['constant', 'uniform', 'gaussian']  # ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
 MODEL_CHOICES = dict()
@@ -100,6 +102,7 @@ def parse_args():
     parser.add_argument('-s', '--seed', default=42, type=int, help='TODO')
     parser.add_argument('-n', '--numSteps', default=10, type=int, help='TODO')
     parser.add_argument('--no_cuda', action='store_true', help='Set this if cuda is availbable, but you do NOT want to use it.')
+    parser.add_argument('--visPath', action='store_true', help='(CAUTION SOLW) Set this if you want to visualize the interpolated inputs on the path by decoding the interpolated embeddings to the closest-by tokens.')
     return parser.parse_args()
 
 
@@ -108,12 +111,16 @@ def main(args):
     startTime = time.time()
     use_cuda = False
     if torch.cuda.is_available() and not args.no_cuda:
-        pass # TODO
-        # use_cuda = True
+        # pass # TODO
+        use_cuda = True
     print('CUDA enabled:', use_cuda)
+    if args.visPath and args.model == 'productReviews5':
+        logging.warning('Visualizing the path by token ids requires ')
 
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_CHOICES[args.model])
     model.eval()
+    if use_cuda:
+        model = model.cuda()
 
     # Dict that tanslates prediction id to class label
     id2label = model.config.id2label
@@ -149,7 +156,7 @@ def main(args):
     # print(inputs)
     model.zero_grad()
     if use_cuda:
-        inputs = inputs.cuda()
+        inputs = inputs.to('cuda')
 
     outputs = model(**inputs)
     probs = torch.softmax(outputs.logits, dim=1)
@@ -180,6 +187,8 @@ def main(args):
 
         # print(blType)
         bl = create_baseline(blType, pad_token_id, sample['input_string'], inputs, tokenizer, model)
+        if use_cuda:
+            bl = bl.cuda()
         # print(sample)
         # print()
         # print(inputs)
@@ -187,7 +196,6 @@ def main(args):
         # print(bl)
         # print(inputs['input_ids'].shape)
         # print(bl.shape)
-
 
         attributions, intrplIds, gradAtIntrpl, cmlGrad = xig.attribute(inputs=inputs['input_ids'],
                                                                        baselines=bl,
@@ -206,21 +214,32 @@ def main(args):
         label = sample['label']
         label_pred = label_pred
 
-        print(inputs['input_ids'])
-        intrplTokens = get_closest_id_from_emb(intrplIds, model, '../knn/sentimentSST2_500.pickle')
-        print(intrplTokens)
-        # intrplTokens = []
-        # for step in intrplIds:
-        #     curStep = []
-        #     for token_emb in step:
-        #         print(token_emb.shape)
-        #         token_id = get_closest_id_from_emb_old(token_emb, model)
-        #         # print(tokenizer.decode(token_id))
-        #         curStep.append(tokenizer.decode(token_id))
-        #     intrplTokens.append(curStep)
+        # print(inputs['input_ids'])
+        # intrplTokens = get_closest_id_from_emb(intrplIds, model, '../knn/sentimentSST2_500.pickle')
+         # print(f'run time: {str(timedelta(seconds=(time.time() - startTime)))}')
+
         # print(intrplTokens)
-        exit()
-        #intrplTokens = [['[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[unused174]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]'], ['[unused174]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[PAD]', '[unused814]', '[PAD]', '[PAD]', '[PAD]', '[unused174]'], ['[unused174]', '[unused533]', '[PAD]', '[unused814]', '[unused814]', '[unused814]', '[unused533]', '[unused814]', '[PAD]', '[unused155]', '[unused155]', '[unused155]', '[unused23]', '[unused814]', '[unused299]', '[unused814]', '[unused533]', '[unused814]', '[unused155]', '##訁'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]'], ['[CLS]', 'even', 'die', '-', 'hard', 'fans', 'of', 'japanese', 'animation', '.', '.', '.', 'will', 'find', 'this', 'one', 'a', 'challenge', '.', '[SEP]']]
+        if args.visPath:
+            intrplTokens = []
+            for step in intrplIds:
+                curStep = []
+                for token_emb in step:
+                    # print(token_emb.shape)
+                    token_id = get_closest_id_from_emb(token_emb, model)
+                    # print(tokenizer.decode(token_id))
+                    curStep.append(tokenizer.decode(token_id))
+                intrplTokens.append(curStep)
+        else:
+            intrplTokens = []
+            decodedInputIds = []
+            for tokenId in inputs['input_ids'][0]:
+                token = tokenizer.decode(tokenId)#inputs['input_ids'][0])
+                decodedInputIds.append(token)
+
+            for _ in range(args.numSteps):
+                intrplTokens.append(decodedInputIds)
+            # print(np.array(intrplTokens).shape)
+
         intrplTokens_bl[blType] = intrplTokens
 
         gradAtIntrpl = summarize_attr(gradAtIntrpl, args.numSteps)
@@ -262,10 +281,10 @@ def main(args):
             indx = args.numSteps - 1
         else:
             indx = int(args.numSteps * val)
-
+        print(indx, val)
         for blType in BASELINE_TYPES:
-            sum_cmlGrad_line_bl[blType].set_xdata(alphas[:indx])
-            sum_cmlGrad_line_bl[blType].set_ydata(sum_cmlGrad_bl[blType][:indx])
+            sum_cmlGrad_line_bl[blType].set_xdata(alphas[:indx+1])
+            sum_cmlGrad_line_bl[blType].set_ydata(sum_cmlGrad_bl[blType][:indx+1])
 
             axs_bl[blType][0].set_xticklabels(intrplTokens_bl[blType][indx], rotation=90) # TODO
             axs_bl[blType][1].set_xticklabels(intrplTokens_bl[blType][indx], rotation=90)
@@ -274,6 +293,7 @@ def main(args):
                 cmlGrad_bar_bl[blType][i].set_height(cmlGrad_bl[blType][indx][i])
 
     alphaSlider.on_changed(update)
+    print(f'run time: {str(timedelta(seconds=(time.time() - startTime)))}')
     plt.show()
 
 
