@@ -8,10 +8,8 @@ from datetime import timedelta
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
-
+from matplotlib.widgets import Slider
 from captum.attr import TokenReferenceBase
-from captum.attr import LayerIntegratedGradients
 from transformers import AutoTokenizer
 from transformers import AutoModelForSequenceClassification
 
@@ -22,7 +20,7 @@ from src.utils import get_closest_id_from_emb
 #from src.start_dig import start_dig
 
 
-BASELINE_TYPES = ['constant', 'uniform', 'gaussian']  # ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
+BASELINE_TYPES = ['constant', 'uniform', 'gaussian', 'maxDist']  # ['constant', 'maxDist', 'blurred', 'uniform', 'gaussian']
 MODEL_CHOICES = dict()
 # Predicts NEGATIVE/POSITIVE sentiment fine tunde on SST (2 classes)
 # https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english?text=I+like+you.+I+love+you
@@ -52,7 +50,7 @@ def create_method(method, forward, input_embeddings):
         raise NameError(f'Method for "{method}" not implemented')
     return custom_ig
 
-# TODO modelName necessarry?
+
 def create_baseline(blType, padTokenId, inputString, inputs, tokenizer, model):
     if blType == 'constant':
         token_reference = TokenReferenceBase(reference_token_idx=padTokenId)
@@ -61,8 +59,8 @@ def create_baseline(blType, padTokenId, inputString, inputs, tokenizer, model):
         bl = src.baseline2.create_uniform_embedding(inputs['input_ids'][0], tokenizer)
     elif blType == 'gaussian':
         bl = src.baseline2.create_gaussian_embedding(inputs['input_ids'][0], tokenizer, model)
-    elif blType == '':
-        pass
+    elif blType == 'maxDist':
+        bl = src.baseline2.create_max_distance_baseline(inputs['input_ids'][0], tokenizer, model)
     else:
         raise NameError(f'Baseline type {blType} not implemented')
     return bl
@@ -92,7 +90,13 @@ def set_seed(seed):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="""Visualization of Integrated Gradients for BERT NLP models inspired by the Distill publication "Visualizing the Impact of Feature Attribution Baselines" (see https://distill.pub/2020/attribution-baselines/#figure4_div).
+The following BERT models are supported:
+\t DUMMY:
+\t\t
+
+
+                                                 """, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-m', '--model',
                         default='sentimentSST2',
                         type=str,
