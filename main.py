@@ -25,10 +25,6 @@ MODEL_CHOICES = dict()
 # https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english?text=I+like+you.+I+love+you
 MODEL_CHOICES['sentimentSST2'] = 'distilbert-base-uncased-finetuned-sst-2-english'
 
-# Predicts 1 star/2 stars/3 stars/4 stars/ 5 stars sentiment for product reviews (5 classes)
-# https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment?text=I+like+you.+I+love+you
-MODEL_CHOICES['productReviews5'] = 'nlptown/bert-base-multilingual-uncased-sentiment'
-
 # Predicts negative/positive/neutral sentiment for financial texts (3 classes)
 # https://huggingface.co/ProsusAI/finbert?text=Stocks+rallied+and+the+British+pound+gained.
 MODEL_CHOICES['sentimentFin3'] = 'ProsusAI/finbert'
@@ -117,17 +113,6 @@ sentimentSST2: 'distilbert-base-uncased-finetuned-sst-2-english'
 \t fine-tuned on SST-2. This model reaches an accuracy of 91.3 on the dev
 \t set (for comparison, Bert bert-base-uncased version reaches an accuracy of 92.7).
 \t https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english?text=I+like+you.+I+love+you
-
-productReviews5: 'nlptown/bert-base-multilingual-uncased-sentiment'
-\t WARNING: Using the --visPath flag is not recommended
-\t This a bert-base-multilingual-uncased model finetuned for sentiment
-\t analysis on product reviews in six languages: English, Dutch, German,
-\t French, Spanish and Italian. It predicts the sentiment of the review as a
-\t number of stars (between 1 and 5).
-\t This model is intended for direct use as a sentiment analysis model for
-\t product reviews in any of the six languages above, or for further
-\t finetuning on related sentiment analysis tasks.
-\t https://huggingface.co/nlptown/bert-base-multilingual-uncased-sentiment?text=I+like+you.+I+love+you
 
 sentimentFin3: 'ProsusAI/finbert'
 \t FinBERT is a pre-trained NLP model to analyze sentiment of financial text.

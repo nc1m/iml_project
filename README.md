@@ -5,6 +5,7 @@ Integrated Gradients: Baselines for Text Classification
 
 Many explanation methods, including the popular `Integrated Gradients` method, require choosing a baseline hyperparameter. What does this parameter mean and how does it impact the resulting explanations? What implicit assumptions are made by selecting different baselines?
 In this project, the goal is to investigate these questions using text classification models as a case study.
+To visualize the effects of different baselines we created a graphic inspired by the Distill publication "Visualizing the Impact of Feature Attribution Baselines" by Sturmfels et. al. (see https://distill.pub/2020/attribution-baselines/#figure4_div).
 
 ### Dependencies
 
@@ -20,6 +21,7 @@ pip install -r requirements.txt
 
 ### Usage
 The default branch for latest and stable changes is `main`.
+
 To see a list of commandline options run:
 ```bash
 
